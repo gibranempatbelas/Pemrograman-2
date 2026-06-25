@@ -1,0 +1,1160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>GARASI — Rental Operations</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Work+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --asphalt:#1C1B19;
+    --asphalt-soft:#262420;
+    --asphalt-line:#3A372F;
+    --paper:#F7F4ED;
+    --paper-dim:#EDE7D8;
+    --paper-line:#DCD4BF;
+    --amber:#E8A23D;
+    --amber-deep:#C97F1F;
+    --green:#1F5C4A;
+    --green-soft:#E2EEE7;
+    --red:#B8453A;
+    --red-soft:#F6E4E1;
+    --steel:#6B6862;
+    --steel-light:#9B968A;
+    --ink:#211F1B;
+    --radius:10px;
+    --shadow:0 1px 2px rgba(28,27,25,.06), 0 4px 14px rgba(28,27,25,.05);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:'Work Sans',sans-serif;
+    background:var(--paper);
+    color:var(--ink);
+    -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3,.display{
+    font-family:'Oswald',sans-serif;
+    text-transform:uppercase;
+    letter-spacing:.03em;
+    font-weight:600;
+    margin:0;
+  }
+  .mono{font-family:'JetBrains Mono',monospace;}
+
+  /* ---------- layout ---------- */
+  .app{display:flex;min-height:100vh;}
+  .sidebar{
+    width:230px;flex-shrink:0;background:var(--asphalt);color:var(--paper);
+    display:flex;flex-direction:column;position:sticky;top:0;height:100vh;
+  }
+  .brand{padding:26px 22px 18px;border-bottom:1px solid var(--asphalt-line);}
+  .brand .mark{
+    font-family:'Oswald',sans-serif;font-size:26px;font-weight:700;letter-spacing:.08em;
+    color:var(--paper);border:2px solid var(--amber);border-radius:6px;
+    padding:4px 10px;display:inline-block;
+  }
+  .brand .tag{display:block;margin-top:10px;font-size:11px;color:var(--steel-light);letter-spacing:.04em;line-height:1.4;}
+  nav.navlist{flex:1;padding:14px 10px;display:flex;flex-direction:column;gap:2px;}
+  .navitem{
+    display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:8px;
+    color:var(--steel-light);text-decoration:none;cursor:pointer;font-size:14px;font-weight:500;
+    border-left:3px solid transparent;transition:background .15s,color .15s;
+  }
+  .navitem svg{width:18px;height:18px;flex-shrink:0;}
+  .navitem:hover{background:var(--asphalt-soft);color:var(--paper);}
+  .navitem.active{background:var(--asphalt-soft);color:var(--paper);border-left:3px solid var(--amber);}
+  .sidebar-foot{padding:14px 22px 20px;font-size:11px;color:var(--steel);border-top:1px solid var(--asphalt-line);}
+
+  .main{flex:1;min-width:0;display:flex;flex-direction:column;}
+  .topbar{padding:26px 36px 18px;border-bottom:1px solid var(--paper-line);background:var(--paper);position:sticky;top:0;z-index:5;}
+  .topbar h1{font-size:24px;color:var(--ink);}
+  .topbar p{margin:6px 0 0;color:var(--steel);font-size:13.5px;}
+  .content{padding:28px 36px 60px;}
+  .view{display:none;}
+  .view.active{display:block;animation:fade .25s ease;}
+  @keyframes fade{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:none;}}
+
+  /* ---------- cards / grid ---------- */
+  .stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:26px;}
+  .stat-card{
+    background:#fff;border:1px solid var(--paper-line);border-radius:var(--radius);
+    padding:18px 18px 16px;box-shadow:var(--shadow);
+  }
+  .stat-card .label{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--steel);font-weight:600;}
+  .stat-card .value{font-family:'Oswald',sans-serif;font-size:28px;font-weight:600;margin-top:6px;color:var(--ink);}
+  .stat-card .value.amber{color:var(--amber-deep);}
+  .stat-card .value.green{color:var(--green);}
+  .stat-card .value.red{color:var(--red);}
+  .stat-card .sub{font-size:12px;color:var(--steel-light);margin-top:4px;}
+
+  .panel{
+    background:#fff;border:1px solid var(--paper-line);border-radius:var(--radius);
+    box-shadow:var(--shadow);padding:22px;margin-bottom:22px;
+  }
+  .panel-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px;}
+  .panel-head h2{font-size:16px;color:var(--ink);}
+  .panel-head .count{font-size:12px;color:var(--steel);}
+
+  .two-col{display:grid;grid-template-columns:380px 1fr;gap:22px;align-items:start;}
+  @media(max-width:980px){.two-col{grid-template-columns:1fr;} .stat-row{grid-template-columns:repeat(2,1fr);}}
+
+  /* ---------- forms ---------- */
+  .field{margin-bottom:14px;}
+  .field label{
+    display:block;font-size:11px;letter-spacing:.05em;text-transform:uppercase;
+    color:var(--steel);font-weight:600;margin-bottom:6px;
+  }
+  .field input,.field select,.field textarea{
+    width:100%;padding:10px 12px;border:1px solid var(--paper-line);border-radius:7px;
+    font-family:'Work Sans',sans-serif;font-size:14px;background:var(--paper);color:var(--ink);
+    transition:border-color .15s, box-shadow .15s;
+  }
+  .field textarea{resize:vertical;min-height:64px;}
+  .field input:focus,.field select:focus,.field textarea:focus{
+    outline:none;border-color:var(--amber);box-shadow:0 0 0 3px rgba(232,162,61,.25);background:#fff;
+  }
+  .field .hint{font-size:11.5px;color:var(--steel-light);margin-top:4px;}
+  .field-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  .readout{
+    background:var(--paper-dim);border:1px dashed var(--paper-line);border-radius:8px;
+    padding:12px 14px;font-size:13px;color:var(--steel);margin-bottom:14px;line-height:1.6;
+  }
+  .readout strong{color:var(--ink);}
+  .readout .total{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:16px;color:var(--green);}
+  .readout .total.warn{color:var(--red);}
+
+  .btn{
+    font-family:'Work Sans',sans-serif;font-weight:600;font-size:13.5px;border-radius:7px;
+    padding:10px 18px;border:1px solid transparent;cursor:pointer;display:inline-flex;align-items:center;gap:8px;
+    transition:transform .08s, filter .15s; letter-spacing:.02em;
+  }
+  .btn:active{transform:translateY(1px);}
+  .btn-primary{background:var(--amber);color:var(--asphalt);}
+  .btn-primary:hover{filter:brightness(1.06);}
+  .btn-primary:disabled{background:var(--steel-light);cursor:not-allowed;}
+  .btn-ghost{background:transparent;color:var(--steel);border-color:var(--paper-line);}
+  .btn-ghost:hover{background:var(--paper-dim);}
+  .btn-danger{background:var(--red);color:#fff;}
+  .btn-danger:hover{filter:brightness(1.08);}
+  .btn-small{padding:6px 11px;font-size:12px;border-radius:6px;}
+  .form-actions{display:flex;gap:10px;margin-top:18px;}
+
+  /* ---------- table ---------- */
+  .table-wrap{overflow-x:auto;}
+  table{width:100%;border-collapse:collapse;font-size:13.5px;}
+  thead th{
+    text-align:left;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--steel);
+    font-weight:700;padding:0 12px 10px;border-bottom:2px solid var(--asphalt);white-space:nowrap;
+  }
+  tbody td{padding:13px 12px;border-bottom:1px solid var(--paper-line);vertical-align:middle;white-space:nowrap;}
+  tbody tr:hover{background:var(--paper-dim);}
+  tbody tr:last-child td{border-bottom:none;}
+  .cell-sub{display:block;font-size:11.5px;color:var(--steel-light);margin-top:2px;}
+  .empty-row td{text-align:center;color:var(--steel-light);padding:34px 12px;white-space:normal;}
+
+  /* signature: plate chip for IDs */
+  .plate-chip{
+    font-family:'JetBrains Mono',monospace;font-weight:700;font-size:11.5px;letter-spacing:.03em;
+    background:var(--paper);border:1.5px solid var(--ink);border-radius:5px;padding:3px 8px;
+    display:inline-block;box-shadow:inset 0 0 0 2px var(--paper);position:relative;
+  }
+  .plate-chip::before{
+    content:'';position:absolute;left:-1.5px;top:-1.5px;right:-1.5px;bottom:-1.5px;
+    border:1px solid var(--ink);border-radius:5px;pointer-events:none;margin:1.5px;
+  }
+
+  /* status pills */
+  .pill{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;padding:4px 10px 4px 8px;border-radius:20px;}
+  .pill::before{content:'';width:6px;height:6px;border-radius:50%;}
+  .pill-available{background:var(--green-soft);color:var(--green);}
+  .pill-available::before{background:var(--green);}
+  .pill-rented{background:#FCEFD9;color:var(--amber-deep);}
+  .pill-rented::before{background:var(--amber-deep);}
+  .pill-maintenance{background:var(--paper-dim);color:var(--steel);}
+  .pill-maintenance::before{background:var(--steel);}
+  .pill-ongoing{background:#FCEFD9;color:var(--amber-deep);}
+  .pill-ongoing::before{background:var(--amber-deep);}
+  .pill-returned{background:var(--green-soft);color:var(--green);}
+  .pill-returned::before{background:var(--green);}
+  .pill-overdue{background:var(--red-soft);color:var(--red);}
+  .pill-overdue::before{background:var(--red);}
+
+  .icon-btn{background:none;border:none;cursor:pointer;color:var(--steel);padding:5px;border-radius:5px;}
+  .icon-btn:hover{background:var(--paper-dim);color:var(--ink);}
+  .icon-btn.danger:hover{color:var(--red);}
+  .row-actions{display:flex;gap:2px;}
+
+  /* process flow */
+  .flow{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;}
+  .flow-step{background:var(--paper-dim);border:1px solid var(--paper-line);border-radius:var(--radius);padding:16px;position:relative;}
+  .flow-step .num{font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--amber-deep);font-size:12px;}
+  .flow-step h3{font-size:14px;margin-top:8px;color:var(--ink);}
+  .flow-step p{font-size:12.5px;color:var(--steel);margin:6px 0 0;line-height:1.5;}
+  .flow-arrow{display:none;}
+  @media(min-width:760px){
+    .flow{align-items:stretch;}
+  }
+  @media(max-width:760px){.flow{grid-template-columns:1fr;}}
+
+  /* filters bar */
+  .filters{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:18px;}
+  .filters .field{margin-bottom:0;min-width:150px;}
+  .filters .field.grow{flex:1;min-width:200px;}
+
+  /* toast */
+  .toast-container{position:fixed;bottom:24px;right:24px;display:flex;flex-direction:column;gap:10px;z-index:200;}
+  .toast{
+    background:var(--asphalt);color:var(--paper);padding:12px 16px;border-radius:8px;font-size:13.5px;
+    box-shadow:var(--shadow);border-left:4px solid var(--amber);min-width:220px;animation:toastin .2s ease;
+  }
+  .toast.error{border-left-color:var(--red);}
+  @keyframes toastin{from{opacity:0;transform:translateX(12px);}to{opacity:1;transform:none;}}
+
+  /* modal */
+  .modal-overlay{
+    position:fixed;inset:0;background:rgba(28,27,25,.55);display:flex;align-items:center;justify-content:center;z-index:300;
+  }
+  .modal-overlay.hidden{display:none;}
+  .modal{background:#fff;border-radius:var(--radius);padding:24px;max-width:380px;width:90%;box-shadow:var(--shadow);}
+  .modal p{font-size:14px;color:var(--ink);line-height:1.6;margin:0 0 18px;}
+  .modal-actions{display:flex;justify-content:flex-end;gap:10px;}
+
+  ::-webkit-scrollbar{height:8px;width:8px;}
+  ::-webkit-scrollbar-thumb{background:var(--steel-light);border-radius:4px;}
+
+  @media(max-width:860px){
+    .app{flex-direction:column;}
+    .sidebar{width:100%;height:auto;position:relative;flex-direction:row;align-items:center;}
+    .brand{border-bottom:none;padding:14px 16px;}
+    nav.navlist{flex-direction:row;overflow-x:auto;padding:8px;}
+    .navitem span{display:none;}
+    .sidebar-foot{display:none;}
+    .topbar,.content{padding-left:18px;padding-right:18px;}
+    .stat-row{grid-template-columns:repeat(2,1fr);}
+  }
+
+  @media print{
+    .sidebar,.topbar,.filters,.form-actions,.panel:not(.print-area),.row-actions,.btn{display:none !important;}
+    body{background:#fff;}
+    .content{padding:0;}
+    .print-area{display:block !important;box-shadow:none;border:none;}
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <span class="mark">GARASI</span>
+      <span class="tag">Rental fleet, customers &amp; transaction ledger</span>
+    </div>
+    <nav class="navlist" id="navlist">
+      <a class="navitem active" data-view="dashboard">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="13" r="8"/><path d="M12 13l4-4M8 13a4 4 0 0 1 4-4"/><path d="M12 3v2M3 13H1M23 13h-2M5 6l1.4 1.4M19 6l-1.4 1.4"/></svg>
+        <span>Dashboard</span>
+      </a>
+      <a class="navitem" data-view="cars">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 13l1.5-5A2 2 0 0 1 6.4 6.5h11.2A2 2 0 0 1 19.5 8L21 13"/><rect x="2" y="13" width="20" height="5" rx="1.5"/><circle cx="7" cy="18.5" r="1.6"/><circle cx="17" cy="18.5" r="1.6"/></svg>
+        <span>Cars</span>
+      </a>
+      <a class="navitem" data-view="customers">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="8" r="3.4"/><path d="M5 20c0-3.6 3.1-6 7-6s7 2.4 7 6"/></svg>
+        <span>Customers</span>
+      </a>
+      <a class="navitem" data-view="rental">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="15" r="3.2"/><path d="M10.3 12.7L18 5M15.5 7.5l2 2M18.5 4.5l2 2"/></svg>
+        <span>New Rental</span>
+      </a>
+      <a class="navitem" data-view="returns">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 8h11a4 4 0 0 1 0 8H9"/><path d="M8 12L4 8l4-4"/></svg>
+        <span>Returns</span>
+      </a>
+      <a class="navitem" data-view="reports">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="5" y="3" width="14" height="18" rx="1.5"/><path d="M9 8h6M9 12h6M9 16h3"/></svg>
+        <span>Reports</span>
+      </a>
+    </nav>
+    <div class="sidebar-foot">Data is stored privately to your account and persists across visits.</div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <h1 id="pageTitle">Dashboard</h1>
+      <p id="pageSubtitle">Today's fleet status at a glance.</p>
+    </header>
+
+    <div class="content">
+
+      <!-- DASHBOARD -->
+      <section id="view-dashboard" class="view active">
+        <div class="stat-row" id="dashStats"></div>
+
+        <div class="panel">
+          <div class="panel-head"><h2>How a rental flows through GARASI</h2></div>
+          <div class="flow">
+            <div class="flow-step"><div class="num">01</div><h3>Register the car</h3><p>Add plate number, model and daily rate to the fleet master. It's saved as Available.</p></div>
+            <div class="flow-step"><div class="num">02</div><h3>Register the customer</h3><p>Capture ID number, phone and address once — reuse it on every future rental.</p></div>
+            <div class="flow-step"><div class="num">03</div><h3>Open a rental</h3><p>Pick an available car and a customer, set the dates. The car flips to Rented.</p></div>
+            <div class="flow-step"><div class="num">04</div><h3>Process the return</h3><p>Log the return date and condition. Late days and damage are billed, the car goes back to Available.</p></div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head"><h2>Recent activity</h2></div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Transaction</th><th>Customer</th><th>Car</th><th>Status</th><th>Started</th></tr></thead>
+              <tbody id="dashRecent"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- CARS -->
+      <section id="view-cars" class="view">
+        <div class="two-col">
+          <div class="panel">
+            <div class="panel-head"><h2 id="carFormTitle">Add a car</h2></div>
+            <form id="carForm">
+              <input type="hidden" id="carEditId">
+              <div class="field"><label for="carPlate">Plate number</label><input id="carPlate" required placeholder="B 1234 XYZ" autocomplete="off"></div>
+              <div class="field-row">
+                <div class="field"><label for="carBrand">Brand</label><input id="carBrand" required placeholder="Toyota"></div>
+                <div class="field"><label for="carModel">Model</label><input id="carModel" required placeholder="Avanza"></div>
+              </div>
+              <div class="field-row">
+                <div class="field"><label for="carYear">Year</label><input id="carYear" type="number" min="1980" max="2030" required placeholder="2022"></div>
+                <div class="field"><label for="carColor">Color</label><input id="carColor" required placeholder="Silver"></div>
+              </div>
+              <div class="field"><label for="carRate">Daily rate (Rp)</label><input id="carRate" type="number" min="0" step="1000" required placeholder="350000"></div>
+              <div class="field"><label for="carStatus">Status</label>
+                <select id="carStatus">
+                  <option value="Available">Available</option>
+                  <option value="Maintenance">Maintenance</option>
+                </select>
+                <div class="hint">New rentals automatically set this to Rented; returns set it back.</div>
+              </div>
+              <div class="form-actions">
+                <button type="submit" class="btn btn-primary" id="carSubmitBtn">Save car</button>
+                <button type="button" class="btn btn-ghost" id="carCancelEdit" style="display:none">Cancel edit</button>
+              </div>
+            </form>
+          </div>
+
+          <div class="panel">
+            <div class="panel-head"><h2>Fleet master</h2><span class="count" id="carCount">0 cars</span></div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>ID</th><th>Plate</th><th>Car</th><th>Daily rate</th><th>Status</th><th></th></tr></thead>
+                <tbody id="carTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- CUSTOMERS -->
+      <section id="view-customers" class="view">
+        <div class="two-col">
+          <div class="panel">
+            <div class="panel-head"><h2 id="custFormTitle">Add a customer</h2></div>
+            <form id="custForm">
+              <input type="hidden" id="custEditId">
+              <div class="field"><label for="custName">Full name</label><input id="custName" required placeholder="Andi Saputra"></div>
+              <div class="field"><label for="custIdNo">ID card number (KTP/SIM)</label><input id="custIdNo" required placeholder="3201xxxxxxxxxxxx"></div>
+              <div class="field-row">
+                <div class="field"><label for="custPhone">Phone</label><input id="custPhone" required placeholder="0812-3456-7890"></div>
+                <div class="field"><label for="custEmail">Email</label><input id="custEmail" type="email" placeholder="optional"></div>
+              </div>
+              <div class="field"><label for="custAddress">Address</label><textarea id="custAddress" required placeholder="Street, city"></textarea></div>
+              <div class="form-actions">
+                <button type="submit" class="btn btn-primary" id="custSubmitBtn">Save customer</button>
+                <button type="button" class="btn btn-ghost" id="custCancelEdit" style="display:none">Cancel edit</button>
+              </div>
+            </form>
+          </div>
+
+          <div class="panel">
+            <div class="panel-head"><h2>Customer master</h2><span class="count" id="custCount">0 customers</span></div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>ID</th><th>Name</th><th>ID number</th><th>Phone</th><th></th></tr></thead>
+                <tbody id="custTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- RENTAL (CHECKOUT) -->
+      <section id="view-rental" class="view">
+        <div class="two-col">
+          <div class="panel">
+            <div class="panel-head"><h2>Open a new rental</h2></div>
+            <form id="rentalForm">
+              <div class="field"><label for="rentCar">Car (available only)</label><select id="rentCar" required></select></div>
+              <div class="field"><label for="rentCustomer">Customer</label><select id="rentCustomer" required></select></div>
+              <div class="field-row">
+                <div class="field"><label for="rentStart">Start date</label><input id="rentStart" type="date" required></div>
+                <div class="field"><label for="rentEnd">Planned return date</label><input id="rentEnd" type="date" required></div>
+              </div>
+              <div class="field"><label for="rentRate">Daily rate (Rp)</label><input id="rentRate" type="number" min="0" step="1000" required></div>
+              <div class="readout" id="rentPreview">Pick a car and dates to see the estimated total.</div>
+              <div class="form-actions">
+                <button type="submit" class="btn btn-primary" id="rentSubmitBtn">Confirm rental</button>
+              </div>
+            </form>
+          </div>
+
+          <div class="panel">
+            <div class="panel-head"><h2>Ongoing rentals</h2><span class="count" id="ongoingCount">0 active</span></div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>ID</th><th>Customer</th><th>Car</th><th>Start</th><th>Due</th><th>Status</th></tr></thead>
+                <tbody id="ongoingTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- RETURNS (CHECK-IN) -->
+      <section id="view-returns" class="view">
+        <div class="two-col">
+          <div class="panel">
+            <div class="panel-head"><h2>Process a return</h2></div>
+            <form id="returnForm">
+              <div class="field"><label for="retRental">Ongoing rental</label><select id="retRental" required></select></div>
+              <div class="readout" id="retInfo">Select a rental to see its details.</div>
+              <div class="field"><label for="retDate">Actual return date</label><input id="retDate" type="date" required></div>
+              <div class="field"><label for="retCondition">Car condition</label>
+                <select id="retCondition">
+                  <option value="Good">Good — no issues</option>
+                  <option value="Minor Damage">Minor damage</option>
+                  <option value="Major Damage">Major damage — needs service</option>
+                </select>
+              </div>
+              <div class="field"><label for="retDamageFee">Damage fee (Rp)</label><input id="retDamageFee" type="number" min="0" step="1000" value="0"></div>
+              <div class="field"><label for="retNotes">Notes</label><textarea id="retNotes" placeholder="Optional condition notes"></textarea></div>
+              <div class="readout" id="retPreview">Total due will be calculated here.</div>
+              <div class="form-actions">
+                <button type="submit" class="btn btn-primary" id="retSubmitBtn" disabled>Confirm return</button>
+              </div>
+            </form>
+          </div>
+
+          <div class="panel">
+            <div class="panel-head"><h2>Returns logged</h2><span class="count" id="retCount">0 returns</span></div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>ID</th><th>Rental</th><th>Returned</th><th>Condition</th><th>Total paid</th></tr></thead>
+                <tbody id="retTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- REPORTS -->
+      <section id="view-reports" class="view">
+        <div class="panel">
+          <div class="filters">
+            <div class="field">
+              <label for="repFrom">From</label><input id="repFrom" type="date">
+            </div>
+            <div class="field">
+              <label for="repTo">To</label><input id="repTo" type="date">
+            </div>
+            <div class="field">
+              <label for="repStatus">Status</label>
+              <select id="repStatus">
+                <option value="All">All</option>
+                <option value="Ongoing">Ongoing</option>
+                <option value="Overdue">Overdue</option>
+                <option value="Returned">Returned</option>
+              </select>
+            </div>
+            <div class="field grow">
+              <label for="repSearch">Search customer or plate</label><input id="repSearch" placeholder="e.g. Andi or B 1234 XYZ">
+            </div>
+            <button class="btn btn-ghost" id="repReset" type="button">Reset filters</button>
+            <button class="btn btn-ghost" id="repExport" type="button">Export CSV</button>
+            <button class="btn btn-primary" id="repPrint" type="button">Print report</button>
+          </div>
+        </div>
+
+        <div class="stat-row" id="repStats"></div>
+
+        <div class="panel print-area">
+          <div class="panel-head"><h2>Transaction report</h2><span class="count" id="repCount">0 transactions</span></div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Transaction</th><th>Customer</th><th>Car</th><th>Start</th><th>Due</th><th>Returned</th><th>Status</th><th>Total</th></tr></thead>
+              <tbody id="repTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<div class="modal-overlay hidden" id="confirmModal">
+  <div class="modal">
+    <p id="confirmMessage"></p>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="confirmCancel">Cancel</button>
+      <button class="btn btn-danger" id="confirmOk">Delete</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ============== STATE ============== */
+  let cars = [], customers = [], rentals = [], returns = [];
+  let pendingDelete = null;
+
+  /* ============== STORAGE HELPERS ============== */
+  async function storageGet(key){
+    try{
+      const res = await window.storage.get(key, false);
+      return res ? res.value : null;
+    }catch(e){ return null; }
+  }
+  async function storageSet(key, value){
+    try{
+      const res = await window.storage.set(key, value, false);
+      return !!res;
+    }catch(e){ console.error('storage set failed', key, e); return false; }
+  }
+
+  async function persist(key){
+    const map = { cars, customers, rentals, returns };
+    return storageSet(key, JSON.stringify(map[key]));
+  }
+
+  async function loadAll(){
+    const [c, cu, r, rt] = await Promise.all([
+      storageGet('cars'), storageGet('customers'), storageGet('rentals'), storageGet('returns')
+    ]);
+    if(c === null){
+      seedDemoData();
+      await Promise.all([persist('cars'), persist('customers'), persist('rentals'), persist('returns')]);
+    }else{
+      cars = JSON.parse(c) || [];
+      customers = cu ? (JSON.parse(cu)||[]) : [];
+      rentals = r ? (JSON.parse(r)||[]) : [];
+      returns = rt ? (JSON.parse(rt)||[]) : [];
+    }
+  }
+
+  function seedDemoData(){
+    cars = [
+      {id:'CAR-001', plate:'B 1234 XYZ', brand:'Toyota', model:'Avanza', year:2022, color:'Silver', dailyRate:350000, status:'Available'},
+      {id:'CAR-002', plate:'B 5678 ABC', brand:'Honda', model:'Brio', year:2021, color:'White', dailyRate:300000, status:'Available'},
+      {id:'CAR-003', plate:'B 9012 DEF', brand:'Daihatsu', model:'Xenia', year:2023, color:'Black', dailyRate:320000, status:'Rented'},
+      {id:'CAR-004', plate:'B 3456 GHI', brand:'Mitsubishi', model:'Pajero Sport', year:2022, color:'Grey', dailyRate:650000, status:'Available'}
+    ];
+    customers = [
+      {id:'CUS-001', name:'Andi Saputra', idNumber:'3201020304050001', phone:'0812-3456-7890', email:'andi@email.com', address:'Depok, Jawa Barat'},
+      {id:'CUS-002', name:'Sri Wahyuni', idNumber:'3202030405060002', phone:'0813-2345-6789', email:'sri@email.com', address:'Jakarta Selatan'},
+      {id:'CUS-003', name:'Budi Hartono', idNumber:'3203040506070003', phone:'0814-5678-1234', email:'', address:'Bogor, Jawa Barat'}
+    ];
+    rentals = [
+      {id:'RNT-001', carId:'CAR-003', customerId:'CUS-001', startDate:'2026-06-18', plannedEndDate:'2026-06-25', dailyRate:320000, status:'Ongoing', createdAt:'2026-06-18'},
+      {id:'RNT-002', carId:'CAR-001', customerId:'CUS-002', startDate:'2026-06-05', plannedEndDate:'2026-06-10', dailyRate:350000, status:'Returned', createdAt:'2026-06-05'}
+    ];
+    returns = [
+      {id:'RTN-001', rentalId:'RNT-002', returnDate:'2026-06-10', condition:'Good', lateDays:0, lateFee:0, damageFee:0, totalPayment:1750000, notes:'', createdAt:'2026-06-10'}
+    ];
+  }
+
+  /* ============== UTILS ============== */
+  function formatRp(n){ return 'Rp ' + Math.round(Number(n)||0).toLocaleString('id-ID'); }
+  function formatDate(iso){
+    if(!iso) return '—';
+    const d = new Date(iso+'T00:00:00');
+    if(isNaN(d)) return '—';
+    return d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
+  }
+  function todayIso(){
+    return new Date('2026-06-21T00:00:00').toISOString().slice(0,10);
+  }
+  function daysBetween(a,b){
+    const d1 = new Date(a+'T00:00:00'), d2 = new Date(b+'T00:00:00');
+    return Math.round((d2-d1)/86400000);
+  }
+  function nextId(prefix, list){
+    let max = 0;
+    list.forEach(it=>{
+      const n = parseInt(String(it.id).split('-')[1],10);
+      if(!isNaN(n) && n>max) max = n;
+    });
+    return prefix + '-' + String(max+1).padStart(3,'0');
+  }
+  function carById(id){ return cars.find(c=>c.id===id); }
+  function customerById(id){ return customers.find(c=>c.id===id); }
+  function rentalById(id){ return rentals.find(r=>r.id===id); }
+  function escapeHtml(s){
+    return String(s==null?'':s).replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  }
+  function plateChip(id){ return '<span class="plate-chip">'+escapeHtml(id)+'</span>'; }
+  function pill(status){
+    const map = {
+      'Available':['pill-available','Available'],
+      'Rented':['pill-rented','Rented'],
+      'Maintenance':['pill-maintenance','Maintenance'],
+      'Ongoing':['pill-ongoing','Ongoing'],
+      'Overdue':['pill-overdue','Overdue'],
+      'Returned':['pill-returned','Returned']
+    };
+    const m = map[status] || ['pill-maintenance', status];
+    return '<span class="pill '+m[0]+'">'+m[1]+'</span>';
+  }
+  function toast(msg, type){
+    const el = document.createElement('div');
+    el.className = 'toast' + (type==='error' ? ' error' : '');
+    el.textContent = msg;
+    document.getElementById('toastContainer').appendChild(el);
+    setTimeout(()=>{ el.style.opacity='0'; el.style.transition='opacity .3s'; setTimeout(()=>el.remove(),300); }, 2600);
+  }
+  function confirmDialog(message, onOk){
+    document.getElementById('confirmMessage').textContent = message;
+    document.getElementById('confirmModal').classList.remove('hidden');
+    pendingDelete = onOk;
+  }
+
+  function rentalIsOverdue(rental){
+    return rental.status === 'Ongoing' && daysBetween(rental.plannedEndDate, todayIso()) > 0;
+  }
+  function rentalDisplayStatus(rental){
+    if(rental.status === 'Returned') return 'Returned';
+    return rentalIsOverdue(rental) ? 'Overdue' : 'Ongoing';
+  }
+
+  /* ============== NAVIGATION ============== */
+  const titles = {
+    dashboard: ['Dashboard', "Today's fleet status at a glance."],
+    cars: ['Cars', 'Manage the fleet master — add, edit or retire vehicles.'],
+    customers: ['Customers', 'Keep renter details on file for faster checkout.'],
+    rental: ['New Rental', 'Check a car out to a customer.'],
+    returns: ['Returns', 'Check a car back in and settle the bill.'],
+    reports: ['Reports', 'Every transaction, filterable and exportable.']
+  };
+  function showView(view){
+    document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+    document.getElementById('view-'+view).classList.add('active');
+    document.querySelectorAll('.navitem').forEach(n=>n.classList.toggle('active', n.dataset.view===view));
+    document.getElementById('pageTitle').textContent = titles[view][0];
+    document.getElementById('pageSubtitle').textContent = titles[view][1];
+    renderAll();
+  }
+  document.getElementById('navlist').addEventListener('click', (e)=>{
+    const item = e.target.closest('.navitem');
+    if(!item) return;
+    showView(item.dataset.view);
+  });
+
+  /* ============== RENDER: DASHBOARD ============== */
+  function renderDashboard(){
+    const available = cars.filter(c=>c.status==='Available').length;
+    const rented = cars.filter(c=>c.status==='Rented').length;
+    const overdue = rentals.filter(rentalIsOverdue).length;
+    const revenue = returns.reduce((s,r)=>s+(r.totalPayment||0),0);
+
+    const stats = [
+      {label:'Fleet size', value:cars.length, sub:available+' available · '+rented+' rented'},
+      {label:'Customers on file', value:customers.length, sub:'Registered renters'},
+      {label:'Active rentals', value:rentals.filter(r=>r.status==='Ongoing').length, sub: overdue ? overdue+' overdue' : 'All on schedule', cls: overdue ? 'red':''},
+      {label:'Revenue collected', value: formatRp(revenue), sub:'From completed returns', cls:'green'}
+    ];
+    document.getElementById('dashStats').innerHTML = stats.map(s=>
+      '<div class="stat-card"><div class="label">'+s.label+'</div><div class="value '+(s.cls||'')+'">'+s.value+'</div><div class="sub">'+s.sub+'</div></div>'
+    ).join('');
+
+    const recent = rentals.slice().sort((a,b)=> b.createdAt.localeCompare(a.createdAt)).slice(0,6);
+    const body = document.getElementById('dashRecent');
+    if(recent.length===0){
+      body.innerHTML = '<tr class="empty-row"><td colspan="5">No transactions yet — open a rental to get started.</td></tr>';
+    }else{
+      body.innerHTML = recent.map(r=>{
+        const c = carById(r.carId), cu = customerById(r.customerId);
+        return '<tr><td>'+plateChip(r.id)+'</td><td>'+escapeHtml(cu?cu.name:'—')+'</td>'
+          +'<td>'+escapeHtml(c?c.plate:'—')+'<span class="cell-sub">'+escapeHtml(c?c.brand+' '+c.model:'')+'</span></td>'
+          +'<td>'+pill(rentalDisplayStatus(r))+'</td><td>'+formatDate(r.startDate)+'</td></tr>';
+      }).join('');
+    }
+  }
+
+  /* ============== RENDER: CARS ============== */
+  function renderCars(){
+    document.getElementById('carCount').textContent = cars.length + (cars.length===1?' car':' cars');
+    const body = document.getElementById('carTableBody');
+    if(cars.length===0){
+      body.innerHTML = '<tr class="empty-row"><td colspan="6">No cars in the fleet yet. Add the first one on the left.</td></tr>';
+    }else{
+      body.innerHTML = cars.slice().sort((a,b)=>a.id.localeCompare(b.id)).map(c=>
+        '<tr><td>'+plateChip(c.id)+'</td><td>'+escapeHtml(c.plate)+'</td>'
+        +'<td>'+escapeHtml(c.brand+' '+c.model)+'<span class="cell-sub">'+c.year+' · '+escapeHtml(c.color)+'</span></td>'
+        +'<td>'+formatRp(c.dailyRate)+'</td><td>'+pill(c.status)+'</td>'
+        +'<td><div class="row-actions">'
+        +'<button class="icon-btn" data-edit-car="'+c.id+'" title="Edit">'+iconEdit()+'</button>'
+        +'<button class="icon-btn danger" data-del-car="'+c.id+'" title="Delete">'+iconTrash()+'</button>'
+        +'</div></td></tr>'
+      ).join('');
+    }
+  }
+
+  function iconEdit(){ return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>'; }
+  function iconTrash(){ return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m-9 0l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13"/></svg>'; }
+
+  const carForm = document.getElementById('carForm');
+  carForm.addEventListener('submit', async (e)=>{
+    e.preventDefault();
+    const editId = document.getElementById('carEditId').value;
+    const plate = document.getElementById('carPlate').value.trim();
+    const dup = cars.find(c=>c.plate.toLowerCase()===plate.toLowerCase() && c.id!==editId);
+    if(dup){ toast('That plate number is already registered.', 'error'); return; }
+
+    const data = {
+      plate,
+      brand: document.getElementById('carBrand').value.trim(),
+      model: document.getElementById('carModel').value.trim(),
+      year: parseInt(document.getElementById('carYear').value,10),
+      color: document.getElementById('carColor').value.trim(),
+      dailyRate: parseInt(document.getElementById('carRate').value,10),
+      status: document.getElementById('carStatus').value
+    };
+    if(editId){
+      const car = carById(editId);
+      if(car.status==='Rented' && data.status!=='Rented'){ data.status='Rented'; }
+      Object.assign(car, data);
+      toast('Car updated.');
+    }else{
+      data.id = nextId('CAR', cars);
+      data.status = 'Available';
+      cars.push(data);
+      toast('Car added to fleet.');
+    }
+    await persist('cars');
+    resetCarForm();
+    renderAll();
+  });
+  function resetCarForm(){
+    carForm.reset();
+    document.getElementById('carEditId').value='';
+    document.getElementById('carFormTitle').textContent='Add a car';
+    document.getElementById('carSubmitBtn').textContent='Save car';
+    document.getElementById('carCancelEdit').style.display='none';
+    document.getElementById('carStatus').closest('.field').style.display='';
+  }
+  document.getElementById('carCancelEdit').addEventListener('click', resetCarForm);
+
+  document.getElementById('carTableBody').addEventListener('click', (e)=>{
+    const editBtn = e.target.closest('[data-edit-car]');
+    const delBtn = e.target.closest('[data-del-car]');
+    if(editBtn){
+      const c = carById(editBtn.dataset.editCar);
+      document.getElementById('carEditId').value = c.id;
+      document.getElementById('carPlate').value = c.plate;
+      document.getElementById('carBrand').value = c.brand;
+      document.getElementById('carModel').value = c.model;
+      document.getElementById('carYear').value = c.year;
+      document.getElementById('carColor').value = c.color;
+      document.getElementById('carRate').value = c.dailyRate;
+      document.getElementById('carStatus').value = (c.status==='Rented') ? 'Available' : c.status;
+      document.getElementById('carFormTitle').textContent = 'Edit ' + c.id;
+      document.getElementById('carSubmitBtn').textContent = 'Update car';
+      document.getElementById('carCancelEdit').style.display = 'inline-flex';
+      window.scrollTo({top:0,behavior:'smooth'});
+    }
+    if(delBtn){
+      const id = delBtn.dataset.delCar;
+      const inUse = rentals.some(r=>r.carId===id);
+      if(inUse){ toast('Cannot delete — this car has rental history. Set it to Maintenance instead.', 'error'); return; }
+      confirmDialog('Delete car '+id+'? This cannot be undone.', async ()=>{
+        cars = cars.filter(c=>c.id!==id);
+        await persist('cars');
+        toast('Car deleted.');
+        renderAll();
+      });
+    }
+  });
+
+  /* ============== RENDER: CUSTOMERS ============== */
+  function renderCustomers(){
+    document.getElementById('custCount').textContent = customers.length + (customers.length===1?' customer':' customers');
+    const body = document.getElementById('custTableBody');
+    if(customers.length===0){
+      body.innerHTML = '<tr class="empty-row"><td colspan="5">No customers on file yet. Add the first one on the left.</td></tr>';
+    }else{
+      body.innerHTML = customers.slice().sort((a,b)=>a.id.localeCompare(b.id)).map(c=>
+        '<tr><td>'+plateChip(c.id)+'</td><td>'+escapeHtml(c.name)+'<span class="cell-sub">'+escapeHtml(c.address||'')+'</span></td>'
+        +'<td class="mono">'+escapeHtml(c.idNumber)+'</td><td>'+escapeHtml(c.phone)+'</td>'
+        +'<td><div class="row-actions">'
+        +'<button class="icon-btn" data-edit-cust="'+c.id+'" title="Edit">'+iconEdit()+'</button>'
+        +'<button class="icon-btn danger" data-del-cust="'+c.id+'" title="Delete">'+iconTrash()+'</button>'
+        +'</div></td></tr>'
+      ).join('');
+    }
+  }
+
+  const custForm = document.getElementById('custForm');
+  custForm.addEventListener('submit', async (e)=>{
+    e.preventDefault();
+    const editId = document.getElementById('custEditId').value;
+    const idNumber = document.getElementById('custIdNo').value.trim();
+    const dup = customers.find(c=>c.idNumber===idNumber && c.id!==editId);
+    if(dup){ toast('That ID number is already registered.', 'error'); return; }
+
+    const data = {
+      name: document.getElementById('custName').value.trim(),
+      idNumber,
+      phone: document.getElementById('custPhone').value.trim(),
+      email: document.getElementById('custEmail').value.trim(),
+      address: document.getElementById('custAddress').value.trim()
+    };
+    if(editId){
+      Object.assign(customerById(editId), data);
+      toast('Customer updated.');
+    }else{
+      data.id = nextId('CUS', customers);
+      customers.push(data);
+      toast('Customer added.');
+    }
+    await persist('customers');
+    resetCustForm();
+    renderAll();
+  });
+  function resetCustForm(){
+    custForm.reset();
+    document.getElementById('custEditId').value='';
+    document.getElementById('custFormTitle').textContent='Add a customer';
+    document.getElementById('custSubmitBtn').textContent='Save customer';
+    document.getElementById('custCancelEdit').style.display='none';
+  }
+  document.getElementById('custCancelEdit').addEventListener('click', resetCustForm);
+
+  document.getElementById('custTableBody').addEventListener('click', (e)=>{
+    const editBtn = e.target.closest('[data-edit-cust]');
+    const delBtn = e.target.closest('[data-del-cust]');
+    if(editBtn){
+      const c = customerById(editBtn.dataset.editCust);
+      document.getElementById('custEditId').value = c.id;
+      document.getElementById('custName').value = c.name;
+      document.getElementById('custIdNo').value = c.idNumber;
+      document.getElementById('custPhone').value = c.phone;
+      document.getElementById('custEmail').value = c.email;
+      document.getElementById('custAddress').value = c.address;
+      document.getElementById('custFormTitle').textContent = 'Edit ' + c.id;
+      document.getElementById('custSubmitBtn').textContent = 'Update customer';
+      document.getElementById('custCancelEdit').style.display = 'inline-flex';
+      window.scrollTo({top:0,behavior:'smooth'});
+    }
+    if(delBtn){
+      const id = delBtn.dataset.delCust;
+      const inUse = rentals.some(r=>r.customerId===id);
+      if(inUse){ toast('Cannot delete — this customer has rental history.', 'error'); return; }
+      confirmDialog('Delete customer '+id+'? This cannot be undone.', async ()=>{
+        customers = customers.filter(c=>c.id!==id);
+        await persist('customers');
+        toast('Customer deleted.');
+        renderAll();
+      });
+    }
+  });
+
+  /* ============== RENDER: RENTAL (CHECKOUT) ============== */
+  function renderRentalForm(){
+    const carSel = document.getElementById('rentCar');
+    const custSel = document.getElementById('rentCustomer');
+    const avail = cars.filter(c=>c.status==='Available');
+    carSel.innerHTML = avail.length
+      ? avail.map(c=>'<option value="'+c.id+'" data-rate="'+c.dailyRate+'">'+c.id+' · '+escapeHtml(c.plate)+' — '+escapeHtml(c.brand+' '+c.model)+'</option>').join('')
+      : '<option value="">No cars available right now</option>';
+    custSel.innerHTML = customers.length
+      ? customers.map(c=>'<option value="'+c.id+'">'+c.id+' · '+escapeHtml(c.name)+'</option>').join('')
+      : '<option value="">Add a customer first</option>';
+
+    if(avail.length){ document.getElementById('rentRate').value = avail[0].dailyRate; }
+    if(!document.getElementById('rentStart').value) document.getElementById('rentStart').value = todayIso();
+    document.getElementById('rentSubmitBtn').disabled = (avail.length===0 || customers.length===0);
+    updateRentalPreview();
+
+    const ongoing = rentals.filter(r=>r.status==='Ongoing');
+    document.getElementById('ongoingCount').textContent = ongoing.length + (ongoing.length===1?' active':' active');
+    const body = document.getElementById('ongoingTableBody');
+    if(ongoing.length===0){
+      body.innerHTML = '<tr class="empty-row"><td colspan="6">No active rentals right now.</td></tr>';
+    }else{
+      body.innerHTML = ongoing.slice().sort((a,b)=>a.plannedEndDate.localeCompare(b.plannedEndDate)).map(r=>{
+        const c = carById(r.carId), cu = customerById(r.customerId);
+        return '<tr><td>'+plateChip(r.id)+'</td><td>'+escapeHtml(cu?cu.name:'—')+'</td>'
+          +'<td>'+escapeHtml(c?c.plate:'—')+'</td><td>'+formatDate(r.startDate)+'</td>'
+          +'<td>'+formatDate(r.plannedEndDate)+'</td><td>'+pill(rentalDisplayStatus(r))+'</td></tr>';
+      }).join('');
+    }
+  }
+  function updateRentalPreview(){
+    const carSel = document.getElementById('rentCar');
+    const start = document.getElementById('rentStart').value;
+    const end = document.getElementById('rentEnd').value;
+    const rate = parseInt(document.getElementById('rentRate').value,10) || 0;
+    const box = document.getElementById('rentPreview');
+    if(!carSel.value || !start || !end){
+      box.innerHTML = 'Pick a car and dates to see the estimated total.';
+      return;
+    }
+    let days = daysBetween(start,end);
+    if(days < 1){
+      box.innerHTML = '<span style="color:var(--red)">Planned return date must be after the start date.</span>';
+      return;
+    }
+    box.innerHTML = '<strong>'+days+' day'+(days===1?'':'s')+'</strong> &times; '+formatRp(rate)+' / day<br>Estimated total: <span class="total">'+formatRp(days*rate)+'</span>';
+  }
+  document.getElementById('rentCar').addEventListener('change', (e)=>{
+    const opt = e.target.selectedOptions[0];
+    if(opt && opt.dataset.rate) document.getElementById('rentRate').value = opt.dataset.rate;
+    updateRentalPreview();
+  });
+  ['rentStart','rentEnd','rentRate'].forEach(id=>document.getElementById(id).addEventListener('input', updateRentalPreview));
+
+  document.getElementById('rentalForm').addEventListener('submit', async (e)=>{
+    e.preventDefault();
+    const carId = document.getElementById('rentCar').value;
+    const customerId = document.getElementById('rentCustomer').value;
+    const startDate = document.getElementById('rentStart').value;
+    const plannedEndDate = document.getElementById('rentEnd').value;
+    const dailyRate = parseInt(document.getElementById('rentRate').value,10);
+    if(!carId || !customerId){ toast('Select a car and a customer.', 'error'); return; }
+    if(daysBetween(startDate,plannedEndDate) < 1){ toast('Planned return date must be after the start date.', 'error'); return; }
+
+    const rental = { id: nextId('RNT', rentals), carId, customerId, startDate, plannedEndDate, dailyRate, status:'Ongoing', createdAt: todayIso() };
+    rentals.push(rental);
+    carById(carId).status = 'Rented';
+    await Promise.all([persist('rentals'), persist('cars')]);
+    toast('Rental '+rental.id+' opened.');
+    document.getElementById('rentalForm').reset();
+    renderAll();
+  });
+
+  /* ============== RENDER: RETURNS (CHECK-IN) ============== */
+  function renderReturnForm(){
+    const sel = document.getElementById('retRental');
+    const ongoing = rentals.filter(r=>r.status==='Ongoing');
+    sel.innerHTML = ongoing.length
+      ? '<option value="">Select…</option>' + ongoing.map(r=>{
+          const c = carById(r.carId), cu = customerById(r.customerId);
+          return '<option value="'+r.id+'">'+r.id+' · '+escapeHtml(c?c.plate:'')+' — '+escapeHtml(cu?cu.name:'')+'</option>';
+        }).join('')
+      : '<option value="">No ongoing rentals</option>';
+    document.getElementById('retDate').value = todayIso();
+    updateReturnPreview();
+
+    document.getElementById('retCount').textContent = returns.length + (returns.length===1?' return':' returns');
+    const body = document.getElementById('retTableBody');
+    if(returns.length===0){
+      body.innerHTML = '<tr class="empty-row"><td colspan="5">No returns processed yet.</td></tr>';
+    }else{
+      body.innerHTML = returns.slice().sort((a,b)=> b.createdAt.localeCompare(a.createdAt)).map(rt=>
+        '<tr><td>'+plateChip(rt.id)+'</td><td>'+plateChip(rt.rentalId)+'</td>'
+        +'<td>'+formatDate(rt.returnDate)+'</td><td>'+escapeHtml(rt.condition)+'</td>'
+        +'<td>'+formatRp(rt.totalPayment)+'</td></tr>'
+      ).join('');
+    }
+  }
+  function updateReturnPreview(){
+    const rentalId = document.getElementById('retRental').value;
+    const info = document.getElementById('retInfo');
+    const preview = document.getElementById('retPreview');
+    const submitBtn = document.getElementById('retSubmitBtn');
+    if(!rentalId){
+      info.innerHTML = 'Select a rental to see its details.';
+      preview.innerHTML = 'Total due will be calculated here.';
+      submitBtn.disabled = true;
+      return;
+    }
+    const r = rentalById(rentalId);
+    const c = carById(r.carId), cu = customerById(r.customerId);
+    info.innerHTML = '<strong>'+escapeHtml(cu.name)+'</strong> · '+escapeHtml(c.plate)+' ('+escapeHtml(c.brand+' '+c.model)+')<br>'
+      +'Out since '+formatDate(r.startDate)+' · due back '+formatDate(r.plannedEndDate)+' · '+formatRp(r.dailyRate)+'/day';
+
+    const returnDate = document.getElementById('retDate').value || todayIso();
+    const damageFee = parseInt(document.getElementById('retDamageFee').value,10) || 0;
+    const plannedDays = Math.max(1, daysBetween(r.startDate, r.plannedEndDate));
+    const baseRental = plannedDays * r.dailyRate;
+    const lateDays = Math.max(0, daysBetween(r.plannedEndDate, returnDate));
+    const lateFee = lateDays * r.dailyRate * 1.5;
+    const total = baseRental + lateFee + damageFee;
+
+    let html = 'Base rental: '+plannedDays+' day(s) &times; '+formatRp(r.dailyRate)+' = '+formatRp(baseRental)+'<br>';
+    if(lateDays>0){
+      html += '<span style="color:var(--red)">Late: '+lateDays+' day(s) &times; 1.5&times; rate = '+formatRp(lateFee)+'</span><br>';
+    }
+    if(damageFee>0){ html += 'Damage fee: '+formatRp(damageFee)+'<br>'; }
+    html += 'Total due: <span class="total'+(lateDays>0||damageFee>0?' warn':'')+'">'+formatRp(total)+'</span>';
+    preview.innerHTML = html;
+    submitBtn.disabled = false;
+  }
+  ['retRental','retDate','retDamageFee','retCondition'].forEach(id=>{
+    document.getElementById(id).addEventListener('input', updateReturnPreview);
+    document.getElementById(id).addEventListener('change', updateReturnPreview);
+  });
+
+  document.getElementById('returnForm').addEventListener('submit', async (e)=>{
+    e.preventDefault();
+    const rentalId = document.getElementById('retRental').value;
+    if(!rentalId){ toast('Select a rental first.', 'error'); return; }
+    const r = rentalById(rentalId);
+    const returnDate = document.getElementById('retDate').value;
+    if(daysBetween(r.startDate, returnDate) < 0){ toast('Return date cannot be before the start date.', 'error'); return; }
+    const condition = document.getElementById('retCondition').value;
+    const damageFee = parseInt(document.getElementById('retDamageFee').value,10) || 0;
+    const notes = document.getElementById('retNotes').value.trim();
+
+    const plannedDays = Math.max(1, daysBetween(r.startDate, r.plannedEndDate));
+    const baseRental = plannedDays * r.dailyRate;
+    const lateDays = Math.max(0, daysBetween(r.plannedEndDate, returnDate));
+    const lateFee = lateDays * r.dailyRate * 1.5;
+    const totalPayment = baseRental + lateFee + damageFee;
+
+    const rec = { id: nextId('RTN', returns), rentalId, returnDate, condition, lateDays, lateFee, damageFee, totalPayment, notes, createdAt: todayIso() };
+    returns.push(rec);
+    r.status = 'Returned';
+    carById(r.carId).status = (condition === 'Major Damage') ? 'Maintenance' : 'Available';
+    await Promise.all([persist('returns'), persist('rentals'), persist('cars')]);
+    toast('Return '+rec.id+' logged — '+formatRp(totalPayment)+' due.');
+    document.getElementById('returnForm').reset();
+    renderAll();
+  });
+
+  /* ============== RENDER: REPORTS ============== */
+  function getFilteredRows(){
+    const from = document.getElementById('repFrom').value;
+    const to = document.getElementById('repTo').value;
+    const status = document.getElementById('repStatus').value;
+    const search = document.getElementById('repSearch').value.trim().toLowerCase();
+
+    return rentals.filter(r=>{
+      if(from && r.startDate < from) return false;
+      if(to && r.startDate > to) return false;
+      const dStatus = rentalDisplayStatus(r);
+      if(status !== 'All' && dStatus !== status) return false;
+      if(search){
+        const c = carById(r.carId), cu = customerById(r.customerId);
+        const hay = ((c?c.plate:'')+' '+(cu?cu.name:'')).toLowerCase();
+        if(!hay.includes(search)) return false;
+      }
+      return true;
+    }).sort((a,b)=> b.startDate.localeCompare(a.startDate));
+  }
+
+  function renderReports(){
+    const rows = getFilteredRows();
+    const totalRevenue = rows.reduce((s,r)=>{
+      const rt = returns.find(x=>x.rentalId===r.id);
+      return s + (rt ? rt.totalPayment : 0);
+    },0);
+    const overdueCount = rows.filter(r=>rentalDisplayStatus(r)==='Overdue').length;
+    const ongoingCount = rows.filter(r=>r.status==='Ongoing').length;
+
+    document.getElementById('repStats').innerHTML = [
+      {label:'Transactions', value: rows.length, sub:'Matching current filters'},
+      {label:'Revenue (completed)', value: formatRp(totalRevenue), sub:'From returned transactions', cls:'green'},
+      {label:'Active', value: ongoingCount, sub:'Still out with customers'},
+      {label:'Overdue', value: overdueCount, sub: overdueCount ? 'Past planned return date':'None — all on schedule', cls: overdueCount?'red':''}
+    ].map(s=>'<div class="stat-card"><div class="label">'+s.label+'</div><div class="value '+(s.cls||'')+'">'+s.value+'</div><div class="sub">'+s.sub+'</div></div>').join('');
+
+    document.getElementById('repCount').textContent = rows.length + (rows.length===1?' transaction':' transactions');
+    const body = document.getElementById('repTableBody');
+    if(rows.length===0){
+      body.innerHTML = '<tr class="empty-row"><td colspan="8">No transactions match these filters.</td></tr>';
+    }else{
+      body.innerHTML = rows.map(r=>{
+        const c = carById(r.carId), cu = customerById(r.customerId);
+        const rt = returns.find(x=>x.rentalId===r.id);
+        const dStatus = rentalDisplayStatus(r);
+        const total = rt ? formatRp(rt.totalPayment) : '<span style="color:var(--steel-light)">pending</span>';
+        return '<tr><td>'+plateChip(r.id)+'</td><td>'+escapeHtml(cu?cu.name:'—')+'</td>'
+          +'<td>'+escapeHtml(c?c.plate:'—')+'<span class="cell-sub">'+escapeHtml(c?c.brand+' '+c.model:'')+'</span></td>'
+          +'<td>'+formatDate(r.startDate)+'</td><td>'+formatDate(r.plannedEndDate)+'</td>'
+          +'<td>'+(rt?formatDate(rt.returnDate):'—')+'</td><td>'+pill(dStatus)+'</td><td>'+total+'</td></tr>';
+      }).join('');
+    }
+  }
+
+  ['repFrom','repTo','repStatus','repSearch'].forEach(id=>{
+    document.getElementById(id).addEventListener('input', renderReports);
+    document.getElementById(id).addEventListener('change', renderReports);
+  });
+  document.getElementById('repReset').addEventListener('click', ()=>{
+    document.getElementById('repFrom').value='';
+    document.getElementById('repTo').value='';
+    document.getElementById('repStatus').value='All';
+    document.getElementById('repSearch').value='';
+    renderReports();
+  });
+  document.getElementById('repPrint').addEventListener('click', ()=> window.print());
+  document.getElementById('repExport').addEventListener('click', ()=>{
+    const rows = getFilteredRows();
+    const header = ['Transaction ID','Customer','Plate','Car','Start Date','Planned Return','Actual Return','Status','Total (Rp)'];
+    const lines = [header.join(',')];
+    rows.forEach(r=>{
+      const c = carById(r.carId), cu = customerById(r.customerId);
+      const rt = returns.find(x=>x.rentalId===r.id);
+      const fields = [
+        r.id, cu?cu.name:'', c?c.plate:'', c?(c.brand+' '+c.model):'',
+        r.startDate, r.plannedEndDate, rt?rt.returnDate:'', rentalDisplayStatus(r), rt?rt.totalPayment:''
+      ].map(f=> '"'+String(f).replace(/"/g,'""')+'"');
+      lines.push(fields.join(','));
+    });
+    const blob = new Blob([lines.join('\n')], {type:'text/csv;charset=utf-8;'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'garasi-transaction-report.csv';
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+    toast('Report exported.');
+  });
+
+  /* ============== MODAL ============== */
+  document.getElementById('confirmCancel').addEventListener('click', ()=>{
+    document.getElementById('confirmModal').classList.add('hidden');
+    pendingDelete = null;
+  });
+  document.getElementById('confirmOk').addEventListener('click', async ()=>{
+    document.getElementById('confirmModal').classList.add('hidden');
+    if(pendingDelete) await pendingDelete();
+    pendingDelete = null;
+  });
+
+  /* ============== RENDER ALL ============== */
+  function renderAll(){
+    renderDashboard();
+    renderCars();
+    renderCustomers();
+    renderRentalForm();
+    renderReturnForm();
+    renderReports();
+  }
+
+  /* ============== INIT ============== */
+  (async function init(){
+    await loadAll();
+    document.getElementById('rentStart').value = todayIso();
+    renderAll();
+  })();
+
+})();
+</script>
+</body>
+</html>
